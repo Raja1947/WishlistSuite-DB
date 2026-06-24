@@ -27,7 +27,7 @@ async function getShopData(shop: string) {
   });
   if (!installation) return null;
 
-  const [allConversions, rawAnalytics, rawTopProducts, rawTopCustomers] = await Promise.all([
+  const [allConversions, rawAnalytics, rawTopProducts, rawTopCustomers, actualWishlistCount] = await Promise.all([
     prisma.wishlistConversion.findMany({
       where: { shop },
       select: { amount: true, createdAt: true },
@@ -68,6 +68,7 @@ async function getShopData(shop: string) {
       ORDER BY item_count DESC
       LIMIT 50
     `,
+    prisma.wishlist.findMany({ where: { shop }, select: { createdAt: true } }),
   ]);
 
   return {
@@ -107,6 +108,7 @@ async function getShopData(shop: string) {
       item_count: Number(c.item_count),
       last_active: c.last_active ? c.last_active.toISOString() : null,
     })),
+    allWishlists: actualWishlistCount.map((w) => ({ createdAt: w.createdAt.toISOString() })),
   };
 }
 
@@ -122,6 +124,7 @@ export default async function ShopDetailPage({ params }: { params: { shop: strin
       allAnalytics={data.allAnalytics}
       topProducts={data.topProducts}
       topCustomers={data.topCustomers}
+      allWishlists={data.allWishlists}
     />
   );
 }

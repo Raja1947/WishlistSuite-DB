@@ -35,12 +35,14 @@ export default function ShopAnalytics({
   allAnalytics,
   topProducts,
   topCustomers,
+  allWishlists,
 }: {
   installation: Installation;
   allConversions: Conversion[];
   allAnalytics: AnalyticsRow[];
   topProducts: TopProduct[];
   topCustomers: TopCustomer[];
+  allWishlists: { createdAt: string }[];
 }) {
   const [period, setPeriod] = useState<Period>("30");
 
@@ -57,10 +59,10 @@ export default function ShopAnalytics({
   );
 
   const totalRevenue = useMemo(() => filteredConversions.reduce((s, c) => s + c.amount, 0), [filteredConversions]);
-  const totalWishlists = useMemo(() => {
-    if (filteredAnalytics.length === 0) return 0;
-    return filteredAnalytics[filteredAnalytics.length - 1].totalWishlists;
-  }, [filteredAnalytics]);
+  const totalWishlists = useMemo(
+    () => cutoff ? allWishlists.filter((w) => new Date(w.createdAt) >= cutoff).length : allWishlists.length,
+    [allWishlists, cutoff]
+  );
   const totalConversions = filteredConversions.length;
 
   const maxRevenue = useMemo(() => Math.max(...filteredAnalytics.map((a) => a.revenue), 1), [filteredAnalytics]);
