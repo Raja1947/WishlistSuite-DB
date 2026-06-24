@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Session {
+  id               String            @id
+  shop             String            @unique
+  state            String
+  isOnline         Boolean           @default(false)
+  scope            String?
+  expires          DateTime?
+  accessToken      String
+  userId           BigInt?
+  firstName        String?
+  lastName         String?
+  email            String?
+  accountOwner     Boolean           @default(false)
+  locale           String?
+  collaborator     Boolean?          @default(false)
+  emailVerified    Boolean?          @default(false)
+  refreshToken          String?
+  refreshTokenExpires   DateTime?
+  mantleApiToken        String?
+  onboarding       Boolean           @default(false)
+  shopInstallation ShopInstallation?
+}
+
+model ShopInstallation {
+  id                 String             @id @default(cuid())
+  shop               String             @unique
+  name               String
+  myshopifyDomain    String             @unique
+  url                String
+  currencyCode       String
+  planDisplayName    String
+  partnerDevelopment Boolean
+  shopifyPlus        Boolean
+  createdAt          DateTime
+  updatedAt          DateTime           @updatedAt
+  contactEmail       String
+  email              String
+  ianaTimezone       String
+  primaryDomainId    String
+  country            String?
+  uninstallEmailSent Boolean            @default(false)
+  session            Session            @relation(fields: [shop], references: [shop])
+  subscription       StoreSubscription?
+}
+
+model Customer {
+  id        String     @id
+  shop      String?
+  email     String?
+  phone     String?    @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  wishlists Wishlist[]
+
+  @@unique([shop, id])
+  @@index([shop])
+  @@index([email])
+}
+
+model Wishlist {
+  id         String         @id @default(uuid())
+  shop       String
+  customerId String?
+  guestId    String?
+  name       String?
+  isDefault  Boolean        @default(true)
+  isPublic   Boolean        @default(false)
+  shareToken String?        @unique
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  customer   Customer?      @relation(fields: [customerId, shop], references: [id, shop])
+  items      WishlistItem[]
+
+  @@index([shop])
+  @@index([shop, customerId])
+  @@index([shop, guestId])
+  @@index([customerId])
+  @@index([guestId])
+  @@index([shareToken])
+}
+
+model WishlistItem {
+  id            String   @id @default(uuid())
+  wishlistId    String
+  productId     String
+  variantId     String?
+  addedAt       DateTime @default(now())
+  note          String?
+  productCache  Json?
+  productHandle String?
+  sourcePage    String?
+  cachedPrice   Decimal? @db.Decimal(10, 2)
+  wishlist      Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId, variantId])
+  @@index([wishlistId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model WishlistAnalytics {
+  id             String   @id @default(uuid())
+  shop           String
+  date           DateTime @default(now()) @db.Date
+  totalWishlists Int      @default(0)
+  totalItems     Int      @default(0)
+  addedItems     Int      @default(0)
+  removedItems   Int      @default(0)
+  convertedItems Int      @default(0)
+  views          Int      @default(0)
+  revenue        Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+
+  @@unique([shop, date])
+  @@index([shop])
+  @@index([date])
+  @@index([shop, createdAt])
+}
+
+model WishlistConversion {
+  id         String   @id @default(uuid())
+  shop       String
+  customerId String?
+  guestId    String?
+  productId  String
+  variantId  String?
+  orderId    String
+  createdAt  DateTime @default(now())
+  amount     Decimal  @default(0) @db.Decimal(10, 2)
+  currency   String?
+
+  @@index([shop])
+  @@index([productId])
+  @@index([orderId])
+  @@index([shop, createdAt])
+}
+
+model StoreSubscription {
+  id                   String           @id @default(cuid())
+  shop                 String           @unique
+  currentPlan          String
+  previousPlan         String?
+  isActive             Boolean          @default(true)
+  startedAt            DateTime         @default(now())
+  currentPlanStartedAt DateTime         @default(now())
+  canceledAt           DateTime?
+  subscriptionId       String?          @unique
+  price                Float?
+  currency             String?          @default("USD")
+  interval             String?
+  status               String           @default("active")
+  cancelReason         String?
+  notes                String?
+  shopInstallation     ShopInstallation @relation(fields: [shop], references: [shop])
+
+  @@index([shop])
+  @@index([status])
+}
+
+model ShopLimits {
+  id                 String    @id @default(cuid())
+  shop               String    @unique
+  totalWishlistItems Int       @default(0)
+  limitReached       Boolean   @default(false)
+  lastUpdated        DateTime  @updatedAt
+  warningsSent       Int       @default(0)
+  notes              String?
+  lastWarningSent100 DateTime?
+  lastWarningSent50  DateTime?
+  lastWarningSent80  DateTime?
+  percentageUsed     Int       @default(0)
+
+  @@index([shop])
+  @@index([limitReached])
+}
+
+model WishlistConfig {
+  id           String   @id @default(cuid())
+  shop         String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  button       Json     @default("{}")
+  floating     Json     @default("{}")
+  notification Json     @default("{}")
+  page         Json     @default("{}")
+  translations Json     @default("{}")
+  integrations Json     @default("{}")
+  selectedLang String   @default("en")
+
+  @@index([shop])
+}
