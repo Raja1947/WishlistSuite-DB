@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import StoresTable, { type Shop } from "@/components/StoresTable";
+import LogoutButton from "@/components/LogoutButton";
 
 export const dynamic = "force-dynamic";
 
@@ -102,13 +103,14 @@ export default async function HomePage() {
             <h1 className="text-3xl font-bold text-white">Wishlist Stores ({totalShops.toLocaleString()})</h1>
             <p className="text-sm text-zinc-500 mt-1">Manage and monitor your connected Shopify stores</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <a href="/top-stores" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-colors hover:border-zinc-500" style={{ background: "#1a1a1a", border: "1px solid #3a3a3a" }}>
               View Top Stores
             </a>
             <a href="/orders" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-colors hover:border-zinc-500" style={{ background: "#1a1a1a", border: "1px solid #3a3a3a" }}>
               View orders data
             </a>
+            <LogoutButton />
           </div>
         </div>
 
