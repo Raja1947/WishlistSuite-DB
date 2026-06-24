@@ -262,8 +262,7 @@ export default function StoresTable({ shops }: { shops: Shop[] }) {
         <div className="relative z-20">
           <button
             onClick={() => toggleDropdown("plan")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${planFilter ? "text-white bg-zinc-700" : "text-zinc-300 hover:text-white"}`}
-            style={{ border: "1px solid #2a2a2a" }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all border border-[#2a2a2a] hover:border-zinc-500 ${planFilter ? "text-white bg-zinc-700" : "text-zinc-300 hover:text-white hover:bg-[#252525]"}`}
           >
             <FunnelIcon /> Plan {planFilter && `(${planFilter})`}
           </button>
@@ -283,8 +282,7 @@ export default function StoresTable({ shops }: { shops: Shop[] }) {
         <div className="relative z-20">
           <button
             onClick={() => toggleDropdown("country")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${countryFilter ? "text-white bg-zinc-700" : "text-zinc-300 hover:text-white"}`}
-            style={{ border: "1px solid #2a2a2a" }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all border border-[#2a2a2a] hover:border-zinc-500 ${countryFilter ? "text-white bg-zinc-700" : "text-zinc-300 hover:text-white hover:bg-[#252525]"}`}
           >
             <FunnelIcon /> Country {countryFilter && `(${countryFilter})`}
           </button>
@@ -304,8 +302,7 @@ export default function StoresTable({ shops }: { shops: Shop[] }) {
         <div className="relative z-20">
           <button
             onClick={() => toggleDropdown("storeType")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${storeTypeFilter ? "text-white bg-zinc-700" : "text-zinc-300 hover:text-white"}`}
-            style={{ border: "1px solid #2a2a2a" }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all border border-[#2a2a2a] hover:border-zinc-500 ${storeTypeFilter ? "text-white bg-zinc-700" : "text-zinc-300 hover:text-white hover:bg-[#252525]"}`}
           >
             <FunnelIcon /> Store Type {storeTypeFilter && `(${storeTypeFilter})`}
           </button>
@@ -322,7 +319,7 @@ export default function StoresTable({ shops }: { shops: Shop[] }) {
         </div>
 
         {/* Export CSV */}
-        <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:text-white transition-colors" style={{ border: "1px solid #2a2a2a" }}>
+        <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:text-white hover:bg-[#252525] transition-all border border-[#2a2a2a] hover:border-zinc-500">
           <DownloadIcon /> Export CSV
         </button>
 
@@ -330,8 +327,7 @@ export default function StoresTable({ shops }: { shops: Shop[] }) {
         <div className="relative z-20">
           <button
             onClick={() => toggleDropdown("columns")}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:text-white transition-colors"
-            style={{ border: openDropdown === "columns" ? "1px solid #555" : "1px solid #2a2a2a" }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:text-white hover:bg-[#252525] transition-all border ${openDropdown === "columns" ? "border-zinc-500" : "border-[#2a2a2a] hover:border-zinc-500"}`}
           >
             <SettingsIcon /> Columns
           </button>
