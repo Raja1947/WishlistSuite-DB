@@ -8,6 +8,7 @@ type Conversion = { amount: number; createdAt: string };
 type AnalyticsRow = { date: string; totalWishlists: number; addedItems: number; convertedItems: number; revenue: number };
 type TopProduct = { productId: string; product_handle: string | null; product_title: string | null; wishlist_count: number; customer_count: number; avg_price: number | null };
 type TopCustomer = { customerId: string | null; email: string | null; wishlist_count: number; item_count: number; last_active: string | null };
+type WishlistDetail = { id: string; name: string; isDefault: boolean; createdAt: string; itemCount: number; items: { id: string; productId: string; handle: string | null; title: string; price: number | null; addedAt: string }[] };
 
 type Installation = {
   name: string;
@@ -45,6 +46,36 @@ export default function ShopAnalytics({
   allWishlists: { createdAt: string }[];
 }) {
   const [period, setPeriod] = useState<Period>("30");
+  const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
+  const [customerWishlists, setCustomerWishlists] = useState<Record<string, WishlistDetail[]>>({});
+  const [loadingCustomer, setLoadingCustomer] = useState<string | null>(null);
+  const [showAllCustomers, setShowAllCustomers] = useState(false);
+  const [allCustomers, setAllCustomers] = useState<TopCustomer[] | null>(null);
+  const [loadingAllCustomers, setLoadingAllCustomers] = useState(false);
+
+  const displayedCustomers = showAllCustomers && allCustomers ? allCustomers : topCustomers;
+
+  async function handleShowAll() {
+    if (showAllCustomers) { setShowAllCustomers(false); return; }
+    setShowAllCustomers(true);
+    if (allCustomers) return;
+    setLoadingAllCustomers(true);
+    const res = await fetch(`/api/shops/${encodeURIComponent(installation.myshopifyDomain)}/customers`);
+    const data = await res.json();
+    setAllCustomers(data);
+    setLoadingAllCustomers(false);
+  }
+
+  async function toggleCustomer(customerId: string) {
+    if (expandedCustomer === customerId) { setExpandedCustomer(null); return; }
+    setExpandedCustomer(customerId);
+    if (customerWishlists[customerId]) return;
+    setLoadingCustomer(customerId);
+    const res = await fetch(`/api/shops/${encodeURIComponent(installation.myshopifyDomain)}/customers/${encodeURIComponent(customerId)}`);
+    const data = await res.json();
+    setCustomerWishlists((prev) => ({ ...prev, [customerId]: data }));
+    setLoadingCustomer(null);
+  }
 
   const cutoff = useMemo(() => cutoffDate(period), [period]);
 
@@ -214,8 +245,21 @@ export default function ShopAnalytics({
 
         {/* Top Customers */}
         <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #2a2a2a" }}>
-          <div className="px-5 py-4" style={{ background: "#1a1a1a", borderBottom: "1px solid #2a2a2a" }}>
-            <h2 className="text-lg font-semibold text-white">Top Customers</h2>
+          <div className="px-5 py-4 flex items-center justify-between" style={{ background: "#1a1a1a", borderBottom: "1px solid #2a2a2a" }}>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Top Customers</h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {showAllCustomers && allCustomers ? `Showing all ${allCustomers.length}` : "Showing top 50"}
+              </p>
+            </div>
+            <button
+              onClick={handleShowAll}
+              disabled={loadingAllCustomers}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-40"
+              style={{ border: "1px solid #2a2a2a" }}
+            >
+              {loadingAllCustomers ? "Loading…" : showAllCustomers ? "Show Top 50" : "Show All"}
+            </button>
           </div>
           <table className="w-full text-sm">
             <thead>
@@ -226,21 +270,94 @@ export default function ShopAnalytics({
               </tr>
             </thead>
             <tbody>
-              {topCustomers.length === 0 && (
+              {displayedCustomers.length === 0 && !loadingAllCustomers && (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-zinc-500">No customers yet</td></tr>
               )}
-              {topCustomers.map((c, i) => (
-                <tr key={c.customerId ?? i} style={{ borderBottom: "1px solid #1a1a1a", background: i % 2 === 0 ? "#0f0f0f" : "#111" }}>
-                  <td className="px-4 py-3 text-zinc-500 text-xs">{i + 1}</td>
-                  <td className="px-4 py-3">
-                    <div className="text-zinc-200 font-medium">{c.email ?? "Guest"}</div>
-                    {c.customerId && <div className="text-zinc-500 text-xs font-mono truncate max-w-xs">{c.customerId}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-300">{formatNumber(c.wishlist_count)}</td>
-                  <td className="px-4 py-3 text-zinc-300 font-semibold">{formatNumber(c.item_count)}</td>
-                  <td className="px-4 py-3 text-zinc-400 text-xs">{c.last_active ? formatDate(c.last_active) : "—"}</td>
-                </tr>
-              ))}
+              {loadingAllCustomers && (
+                <tr><td colSpan={5} className="px-4 py-10 text-center text-zinc-500">Loading all customers…</td></tr>
+              )}
+              {displayedCustomers.map((c, i) => {
+                const isExpanded = expandedCustomer === c.customerId;
+                const wishlists = c.customerId ? customerWishlists[c.customerId] : undefined;
+                const isLoading = loadingCustomer === c.customerId;
+                return (
+                  <>
+                    <tr
+                      key={c.customerId ?? i}
+                      onClick={() => c.customerId && toggleCustomer(c.customerId)}
+                      style={{ borderBottom: isExpanded ? "none" : "1px solid #1a1a1a", background: i % 2 === 0 ? "#0f0f0f" : "#111", cursor: c.customerId ? "pointer" : "default" }}
+                      onMouseEnter={(e) => { if (c.customerId) e.currentTarget.style.background = "#1c1c1c"; }}
+                      onMouseLeave={(e) => { if (c.customerId) e.currentTarget.style.background = i % 2 === 0 ? "#0f0f0f" : "#111"; }}
+                    >
+                      <td className="px-4 py-3 text-zinc-500 text-xs">{i + 1}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {c.customerId && (
+                            <svg className={`w-3.5 h-3.5 text-zinc-500 flex-shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                          )}
+                          <div>
+                            <div className="text-zinc-200 font-medium">{c.email ?? "Guest"}</div>
+                            {c.customerId && <div className="text-zinc-500 text-xs font-mono truncate max-w-xs">{c.customerId}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-300">{formatNumber(c.wishlist_count)}</td>
+                      <td className="px-4 py-3 text-zinc-300 font-semibold">{formatNumber(c.item_count)}</td>
+                      <td className="px-4 py-3 text-zinc-400 text-xs">{c.last_active ? formatDate(c.last_active) : "—"}</td>
+                    </tr>
+
+                    {isExpanded && (
+                      <tr key={`${c.customerId}-expand`} style={{ borderBottom: "1px solid #1a1a1a" }}>
+                        <td colSpan={5} style={{ background: "#0a0a0a", padding: "0 16px 16px 48px" }}>
+                          {isLoading ? (
+                            <p className="text-zinc-500 text-xs py-4">Loading wishlists…</p>
+                          ) : wishlists && wishlists.length === 0 ? (
+                            <p className="text-zinc-500 text-xs py-4">No wishlists found.</p>
+                          ) : wishlists ? (
+                            <div className="space-y-4 pt-3">
+                              {wishlists.map((w) => (
+                                <div key={w.id}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-semibold text-zinc-300">{w.name}</span>
+                                    {w.isDefault && <span className="text-[10px] px-1.5 py-0.5 rounded text-zinc-400" style={{ background: "#1f1f1f", border: "1px solid #2a2a2a" }}>Default</span>}
+                                    <span className="text-[10px] text-zinc-600">{w.itemCount} item{w.itemCount !== 1 ? "s" : ""}</span>
+                                  </div>
+                                  {w.items.length === 0 ? (
+                                    <p className="text-xs text-zinc-600 pl-2">Empty wishlist</p>
+                                  ) : (
+                                    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #1f1f1f" }}>
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr style={{ background: "#141414", borderBottom: "1px solid #1f1f1f" }}>
+                                            <th className="px-3 py-2 text-left text-zinc-500 font-medium">Product</th>
+                                            <th className="px-3 py-2 text-left text-zinc-500 font-medium">Price</th>
+                                            <th className="px-3 py-2 text-left text-zinc-500 font-medium">Added</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {w.items.map((item, idx) => (
+                                            <tr key={item.id} style={{ background: idx % 2 === 0 ? "#0f0f0f" : "#111", borderBottom: "1px solid #1a1a1a" }}>
+                                              <td className="px-3 py-2 text-zinc-300">{item.title}</td>
+                                              <td className="px-3 py-2 text-zinc-400">{item.price != null ? formatCurrency(item.price) : "—"}</td>
+                                              <td className="px-3 py-2 text-zinc-500">{formatDate(item.addedAt)}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>
