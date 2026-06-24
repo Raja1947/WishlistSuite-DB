@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/format";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 type Conversion = { amount: number; createdAt: string };
 type AnalyticsRow = { date: string; totalWishlists: number; addedItems: number; convertedItems: number; revenue: number };
@@ -96,7 +97,16 @@ export default function ShopAnalytics({
   );
   const totalConversions = filteredConversions.length;
 
-  const maxRevenue = useMemo(() => Math.max(...filteredAnalytics.map((a) => a.revenue), 1), [filteredAnalytics]);
+  const revenueByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    filteredConversions.forEach((c) => {
+      const day = c.createdAt.slice(0, 10);
+      map[day] = (map[day] ?? 0) + c.amount;
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([date, revenue]) => ({ date, revenue }));
+  }, [filteredConversions]);
+
+  const maxRevenue = useMemo(() => Math.max(...revenueByDate.map((r) => r.revenue), 1), [revenueByDate]);
 
   const exportCSV = () => {
     const header = "Rank,Product,Handle,Times Wishlisted,Customers,Avg Price";
@@ -182,28 +192,45 @@ export default function ShopAnalytics({
         {/* Revenue Over Time */}
         <div className="rounded-xl p-5 mb-6" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
           <h2 className="text-lg font-semibold text-white mb-4">Revenue Over Time</h2>
-          {filteredAnalytics.length === 0 || filteredAnalytics.every((a) => a.revenue === 0) ? (
-            <div className="flex items-center justify-center h-40 text-zinc-500">No revenue data available</div>
+          {revenueByDate.length === 0 ? (
+            <div className="flex items-center justify-center h-[350px] text-zinc-500 text-sm">No revenue data available</div>
           ) : (
-            <div className="flex items-end gap-1 h-40 overflow-x-auto pb-6 relative">
-              {filteredAnalytics.map((row) => {
-                const pct = maxRevenue > 0 ? (row.revenue / maxRevenue) * 100 : 0;
-                return (
-                  <div key={row.date} className="flex flex-col items-center gap-1 min-w-[28px] flex-1 group relative">
-                    <div
-                      className="w-full rounded-t-sm bg-blue-500 group-hover:bg-blue-400 transition-colors"
-                      style={{ height: `${Math.max(pct, 2)}%` }}
-                      title={`${formatDate(row.date)}: ${formatCurrency(row.revenue, installation.currencyCode)}`}
-                    />
-                    {filteredAnalytics.length <= 14 && (
-                      <span className="absolute -bottom-5 text-[9px] text-zinc-500 rotate-45 origin-left whitespace-nowrap">
-                        {new Date(row.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={revenueByDate}>
+                <XAxis
+                  dataKey="date"
+                  stroke="#71717a"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  stroke="#71717a"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
+                  width={55}
+                />
+                <Tooltip
+                  contentStyle={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: "#a1a1aa", marginBottom: 4 }}
+                  itemStyle={{ color: "#818cf8" }}
+                  labelFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  formatter={(v: number) => [formatCurrency(v, installation.currencyCode), "Revenue"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#818cf8"
+                  strokeWidth={2}
+                  dot={revenueByDate.length < 3}
+                  activeDot={{ r: 5, fill: "#818cf8", stroke: "#1a1a1a", strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           )}
         </div>
 
