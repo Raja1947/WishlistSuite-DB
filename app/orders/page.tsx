@@ -10,24 +10,49 @@ type ShopConvRow = {
   total_orders: bigint;
 };
 
-export default async function OrdersPage() {
+type Period = "7" | "30" | "90" | "all";
+
+export default async function OrdersPage({ searchParams }: { searchParams: { period?: string } }) {
+  const period = (searchParams.period ?? "all") as Period;
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+
+  const cutoff = period === "all" ? null : new Date(Date.now() - Number(period) * 86400000);
 
   const [totalOrders, recentOrders, topShops] = await Promise.all([
     prisma.wishlistConversion.count(),
     prisma.wishlistConversion.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
-    prisma.$queryRaw<ShopConvRow[]>`
-      SELECT
-        wc.shop,
-        si.name,
-        COUNT(wc.id)::bigint AS total_orders
-      FROM "WishlistConversion" wc
-      LEFT JOIN "ShopInstallation" si ON si.shop = wc.shop
-      GROUP BY wc.shop, si.name
-      ORDER BY total_orders DESC
-      LIMIT 50
-    `,
+    cutoff
+      ? prisma.$queryRaw<ShopConvRow[]>`
+          SELECT
+            wc.shop,
+            si.name,
+            COUNT(wc.id)::bigint AS total_orders
+          FROM "WishlistConversion" wc
+          LEFT JOIN "ShopInstallation" si ON si.shop = wc.shop
+          WHERE wc."createdAt" >= ${cutoff}
+          GROUP BY wc.shop, si.name
+          ORDER BY total_orders DESC
+          LIMIT 50
+        `
+      : prisma.$queryRaw<ShopConvRow[]>`
+          SELECT
+            wc.shop,
+            si.name,
+            COUNT(wc.id)::bigint AS total_orders
+          FROM "WishlistConversion" wc
+          LEFT JOIN "ShopInstallation" si ON si.shop = wc.shop
+          GROUP BY wc.shop, si.name
+          ORDER BY total_orders DESC
+          LIMIT 50
+        `,
   ]);
+
+  const periods: { key: Period; label: string }[] = [
+    { key: "7", label: "7 Days" },
+    { key: "30", label: "30 Days" },
+    { key: "90", label: "90 Days" },
+    { key: "all", label: "All Time" },
+  ];
 
   return (
     <div className="min-h-screen px-6 py-8" style={{ background: "#080808" }}>
@@ -44,7 +69,22 @@ export default async function OrdersPage() {
         </Link>
 
         <h1 className="text-3xl font-bold text-white mb-1">Orders Dashboard</h1>
-        <p className="text-zinc-500 text-sm mb-8">Overview of your conversion metrics</p>
+        <p className="text-zinc-500 text-sm mb-6">Overview of your conversion metrics</p>
+
+        {/* Period tabs */}
+        <div className="flex gap-1 mb-8 p-1 rounded-lg w-fit" style={{ background: "#1a1a1a" }}>
+          {periods.map((p) => (
+            <Link
+              key={p.key}
+              href={`/orders?period=${p.key}`}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                period === p.key ? "bg-white text-black" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              {p.label}
+            </Link>
+          ))}
+        </div>
 
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -74,7 +114,9 @@ export default async function OrdersPage() {
         <div className="rounded-xl overflow-hidden" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
           <div className="px-6 py-4 border-b border-[#2a2a2a]">
             <h2 className="text-base font-semibold text-white">Top 50 Stores by Orders</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">Stores with the highest total conversions</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {period === "all" ? "All time conversions" : `Last ${period} days`}
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -100,7 +142,7 @@ export default async function OrdersPage() {
                   </tr>
                 ))}
                 {topShops.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-16 text-center text-zinc-500">No conversion data yet.</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-16 text-center text-zinc-500">No conversion data for this period.</td></tr>
                 )}
               </tbody>
             </table>
