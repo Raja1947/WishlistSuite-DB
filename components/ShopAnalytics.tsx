@@ -131,7 +131,10 @@ export default function ShopAnalytics({
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <Link href="/" className="text-sm text-zinc-400 hover:text-white mb-3 inline-block">← All Shops</Link>
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-3 px-3 py-1.5 rounded-lg transition-colors" style={{ border: "1px solid #2a2a2a" }}>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              Back
+            </Link>
             <h1 className="text-3xl font-bold text-white">Analytics for {installation.name}</h1>
             <p className="text-zinc-400 mt-1">Monitor your wishlist performance and revenue</p>
           </div>

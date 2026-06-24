@@ -104,10 +104,10 @@ export default async function HomePage() {
             <p className="text-sm text-zinc-500 mt-1">Manage and monitor your connected Shopify stores</p>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/top-stores" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-colors hover:border-zinc-500" style={{ background: "#1a1a1a", border: "1px solid #3a3a3a" }}>
+            <a href="/top-stores" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-all bg-[#1a1a1a] border border-[#3a3a3a] hover:bg-[#252525] hover:border-zinc-500">
               View Top Stores
             </a>
-            <a href="/orders" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-colors hover:border-zinc-500" style={{ background: "#1a1a1a", border: "1px solid #3a3a3a" }}>
+            <a href="/orders" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-all bg-[#1a1a1a] border border-[#3a3a3a] hover:bg-[#252525] hover:border-zinc-500">
               View orders data
             </a>
             <LogoutButton />
