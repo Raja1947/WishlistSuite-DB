@@ -349,7 +349,7 @@ export default function ShopAnalytics({
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xs font-semibold text-zinc-300">{w.name}</span>
                                     {w.isDefault && <span className="text-[10px] px-1.5 py-0.5 rounded text-zinc-400" style={{ background: "#1f1f1f", border: "1px solid #2a2a2a" }}>Default</span>}
-                                    <span className="text-[10px] text-zinc-600">{w.itemCount} item{w.itemCount !== 1 ? "s" : ""}</span>
+                                    <span className="text-xs text-zinc-300 ml-2">{w.itemCount} item{w.itemCount !== 1 ? "s" : ""}</span>
                                   </div>
                                   {w.items.length === 0 ? (
                                     <p className="text-xs text-zinc-600 pl-2">Empty wishlist</p>

@@ -3,6 +3,23 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/format";
 
+function SortIcon({ dir }: { dir: "asc" | "desc" | null }) {
+  return (
+    <svg className="w-3.5 h-3.5 inline ml-1 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      {dir === "asc" ? (
+        <polyline points="18 15 12 9 6 15" />
+      ) : dir === "desc" ? (
+        <polyline points="6 9 12 15 18 9" />
+      ) : (
+        <>
+          <polyline points="18 15 12 9 6 15" opacity="0.4" />
+          <polyline points="6 17 12 23 18 17" opacity="0.4" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 type StoreRow = {
   shop: string;
   name: string;
@@ -183,10 +200,10 @@ export default function TopStoresView({ stores }: { stores: StoreRow[] }) {
                     <th
                       key={col.label}
                       onClick={() => col.key && handleSort(col.key as typeof sortKey)}
-                      className={`px-4 py-3 text-left font-medium whitespace-nowrap ${col.key ? "cursor-pointer hover:text-zinc-300" : ""}`}
+                      className={`px-4 py-3 text-left text-sm font-medium text-zinc-400 whitespace-nowrap ${col.key ? "cursor-pointer hover:text-zinc-200 select-none" : ""}`}
                     >
                       {col.label}
-                      {col.key && <span className="ml-1 text-zinc-600">{sortKey === col.key ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>}
+                      {col.key && <SortIcon dir={sortKey === col.key ? sortDir : null} />}
                     </th>
                   ))}
                 </tr>
