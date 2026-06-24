@@ -241,6 +241,7 @@ export default function ShopAnalytics({
         <div className="rounded-xl overflow-hidden mb-6" style={{ border: "1px solid #2a2a2a" }}>
           <div className="px-5 py-4" style={{ background: "#1a1a1a", borderBottom: "1px solid #2a2a2a" }}>
             <h2 className="text-lg font-semibold text-white">Top Wishlisted Products</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Top 25 products by wishlist count</p>
           </div>
           <table className="w-full text-sm">
             <thead>
