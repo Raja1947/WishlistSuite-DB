@@ -3,7 +3,7 @@ import Link from "next/link";
 import StoresTable, { type Shop } from "@/components/StoresTable";
 import LogoutButton from "@/components/LogoutButton";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type RawShopRow = {
   shop: string;

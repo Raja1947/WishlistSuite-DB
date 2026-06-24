@@ -2,13 +2,15 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { formatNumber } from "@/lib/format";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type ShopConvRow = {
   shop: string;
   name: string | null;
   total_orders: bigint;
 };
+
+type OrdersTotal = { total_orders: bigint; recent_orders: bigint };
 
 type Period = "7" | "30" | "90" | "all";
 
@@ -18,9 +20,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: { per
 
   const cutoff = period === "all" ? null : new Date(Date.now() - Number(period) * 86400000);
 
-  const [totalOrders, recentOrders, topShops] = await Promise.all([
-    prisma.wishlistConversion.count(),
-    prisma.wishlistConversion.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+  const [rawTotals, topShops] = await Promise.all([
+    prisma.$queryRaw<OrdersTotal[]>`
+      SELECT
+        COUNT(*)::bigint as total_orders,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${thirtyDaysAgo})::bigint as recent_orders
+      FROM "WishlistConversion"
+    `,
     cutoff
       ? prisma.$queryRaw<ShopConvRow[]>`
           SELECT
@@ -46,6 +52,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: { per
           LIMIT 50
         `,
   ]);
+
+  const totalOrders = Number(rawTotals[0]?.total_orders ?? 0);
+  const recentOrders = Number(rawTotals[0]?.recent_orders ?? 0);
 
   const periods: { key: Period; label: string }[] = [
     { key: "7", label: "7 Days" },

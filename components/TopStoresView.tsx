@@ -20,6 +20,8 @@ function SortIcon({ dir }: { dir: "asc" | "desc" | null }) {
   );
 }
 
+type PeriodStat = { revenue: number; orders: number };
+
 type StoreRow = {
   shop: string;
   name: string;
@@ -28,18 +30,11 @@ type StoreRow = {
   currencyCode: string;
   email: string;
   planDisplayName: string;
-  conversions: Array<{ amount: number; createdAt: string }>;
   wishlist_count: number;
+  stats: { days7: PeriodStat; days30: PeriodStat; days90: PeriodStat; all: PeriodStat };
 };
 
 type Period = "7" | "30" | "90" | "all";
-
-function filterByPeriod<T extends { createdAt: string }>(items: T[], period: Period): T[] {
-  if (period === "all") return items;
-  const days = Number(period);
-  const cutoff = new Date(Date.now() - days * 86400000).toISOString();
-  return items.filter((i) => i.createdAt >= cutoff);
-}
 
 export default function TopStoresView({ stores }: { stores: StoreRow[] }) {
   const [period, setPeriod] = useState<Period>("7");
@@ -48,12 +43,8 @@ export default function TopStoresView({ stores }: { stores: StoreRow[] }) {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const computed = useMemo(() => {
-    return stores.map((s) => {
-      const filtered = filterByPeriod(s.conversions, period);
-      const revenue = filtered.reduce((sum, c) => sum + c.amount, 0);
-      const orders = filtered.length;
-      return { ...s, revenue, orders };
-    });
+    const key = period === "7" ? "days7" : period === "30" ? "days30" : period === "90" ? "days90" : "all";
+    return stores.map((s) => ({ ...s, revenue: s.stats[key].revenue, orders: s.stats[key].orders }));
   }, [stores, period]);
 
   const totals = useMemo(() => {

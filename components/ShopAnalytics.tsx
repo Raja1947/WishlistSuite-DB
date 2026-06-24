@@ -5,11 +5,13 @@ import Link from "next/link";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/format";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
-type Conversion = { amount: number; createdAt: string };
 type AnalyticsRow = { date: string; totalWishlists: number; addedItems: number; convertedItems: number; revenue: number };
 type TopProduct = { productId: string; product_handle: string | null; product_title: string | null; wishlist_count: number; customer_count: number; avg_price: number | null };
 type TopCustomer = { customerId: string | null; email: string | null; wishlist_count: number; item_count: number; last_active: string | null };
 type WishlistDetail = { id: string; name: string; isDefault: boolean; createdAt: string; itemCount: number; items: { id: string; productId: string; handle: string | null; title: string; price: number | null; addedAt: string }[] };
+type PeriodStat = { totalConversions: number; totalRevenue: number };
+type PeriodStats = { all: PeriodStat; days90: PeriodStat; days30: PeriodStat; days7: PeriodStat };
+type WishlistCounts = { all: number; days90: number; days30: number; days7: number };
 
 type Installation = {
   name: string;
@@ -33,18 +35,20 @@ function cutoffDate(period: Period): Date | null {
 
 export default function ShopAnalytics({
   installation,
-  allConversions,
   allAnalytics,
   topProducts,
   topCustomers,
-  allWishlists,
+  periodStats,
+  allRevenueByDate,
+  wishlistCounts,
 }: {
   installation: Installation;
-  allConversions: Conversion[];
   allAnalytics: AnalyticsRow[];
   topProducts: TopProduct[];
   topCustomers: TopCustomer[];
-  allWishlists: { createdAt: string }[];
+  periodStats: PeriodStats;
+  allRevenueByDate: { date: string; revenue: number }[];
+  wishlistCounts: WishlistCounts;
 }) {
   const [period, setPeriod] = useState<Period>("30");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
@@ -80,31 +84,20 @@ export default function ShopAnalytics({
 
   const cutoff = useMemo(() => cutoffDate(period), [period]);
 
-  const filteredConversions = useMemo(
-    () => cutoff ? allConversions.filter((c) => new Date(c.createdAt) >= cutoff) : allConversions,
-    [allConversions, cutoff]
-  );
-
   const filteredAnalytics = useMemo(
     () => (cutoff ? allAnalytics.filter((a) => new Date(a.date) >= cutoff) : allAnalytics).sort((a, b) => a.date.localeCompare(b.date)),
     [allAnalytics, cutoff]
   );
 
-  const totalRevenue = useMemo(() => filteredConversions.reduce((s, c) => s + c.amount, 0), [filteredConversions]);
-  const totalWishlists = useMemo(
-    () => cutoff ? allWishlists.filter((w) => new Date(w.createdAt) >= cutoff).length : allWishlists.length,
-    [allWishlists, cutoff]
-  );
-  const totalConversions = filteredConversions.length;
+  const periodKey = period === "7" ? "days7" : period === "30" ? "days30" : period === "90" ? "days90" : "all";
+  const totalRevenue = periodStats[periodKey].totalRevenue;
+  const totalConversions = periodStats[periodKey].totalConversions;
+  const totalWishlists = wishlistCounts[periodKey];
 
   const revenueByDate = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredConversions.forEach((c) => {
-      const day = c.createdAt.slice(0, 10);
-      map[day] = (map[day] ?? 0) + c.amount;
-    });
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([date, revenue]) => ({ date, revenue }));
-  }, [filteredConversions]);
+    if (!cutoff) return allRevenueByDate;
+    return allRevenueByDate.filter((r) => new Date(r.date) >= cutoff);
+  }, [allRevenueByDate, cutoff]);
 
   const maxRevenue = useMemo(() => Math.max(...revenueByDate.map((r) => r.revenue), 1), [revenueByDate]);
 

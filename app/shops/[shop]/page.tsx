@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import ShopAnalytics from "@/components/ShopAnalytics";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type RawTopProduct = {
   productId: string;
@@ -21,18 +21,42 @@ type RawTopCustomer = {
   last_active: Date | null;
 };
 
-async function getShopData(shop: string) {
-  const installation = await prisma.shopInstallation.findUnique({
-    where: { shop },
-  });
-  if (!installation) return null;
+type RawConvStats = {
+  conv_all: bigint;
+  conv7: bigint;
+  conv30: bigint;
+  conv90: bigint;
+  rev7: number;
+  rev30: number;
+  rev90: number;
+  rev_all: number;
+};
 
-  const [allConversions, rawAnalytics, rawTopProducts, rawTopCustomers, actualWishlistCount] = await Promise.all([
-    prisma.wishlistConversion.findMany({
-      where: { shop },
-      select: { amount: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
-    }),
+type RawWishlistCounts = {
+  count_all: bigint;
+  count7: bigint;
+  count30: bigint;
+  count90: bigint;
+};
+
+type RawRevenuePoint = { date: string; revenue: number };
+
+async function getShopData(shop: string) {
+  const now = new Date();
+  const cutoff7  = new Date(now.getTime() - 7  * 86400000);
+  const cutoff30 = new Date(now.getTime() - 30 * 86400000);
+  const cutoff90 = new Date(now.getTime() - 90 * 86400000);
+
+  const [
+    installation,
+    rawAnalytics,
+    rawTopProducts,
+    rawTopCustomers,
+    rawConvStats,
+    rawRevenueByDate,
+    rawWishlistCounts,
+  ] = await Promise.all([
+    prisma.shopInstallation.findUnique({ where: { shop } }),
     prisma.wishlistAnalytics.findMany({
       where: { shop },
       orderBy: { date: "desc" },
@@ -68,8 +92,43 @@ async function getShopData(shop: string) {
       ORDER BY item_count DESC
       LIMIT 50
     `,
-    prisma.wishlist.findMany({ where: { shop }, select: { createdAt: true } }),
+    prisma.$queryRaw<RawConvStats[]>`
+      SELECT
+        COUNT(*)::bigint                                                                  AS conv_all,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${cutoff7})::bigint                         AS conv7,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${cutoff30})::bigint                        AS conv30,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${cutoff90})::bigint                        AS conv90,
+        COALESCE(SUM(amount) FILTER (WHERE "createdAt" >= ${cutoff7}),  0)::float         AS rev7,
+        COALESCE(SUM(amount) FILTER (WHERE "createdAt" >= ${cutoff30}), 0)::float         AS rev30,
+        COALESCE(SUM(amount) FILTER (WHERE "createdAt" >= ${cutoff90}), 0)::float         AS rev90,
+        COALESCE(SUM(amount), 0)::float                                                   AS rev_all
+      FROM "WishlistConversion"
+      WHERE shop = ${shop}
+    `,
+    prisma.$queryRaw<RawRevenuePoint[]>`
+      SELECT
+        "createdAt"::date::text AS date,
+        SUM(amount)::float      AS revenue
+      FROM "WishlistConversion"
+      WHERE shop = ${shop}
+      GROUP BY "createdAt"::date
+      ORDER BY date ASC
+    `,
+    prisma.$queryRaw<RawWishlistCounts[]>`
+      SELECT
+        COUNT(*)::bigint                                               AS count_all,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${cutoff7})::bigint      AS count7,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${cutoff30})::bigint     AS count30,
+        COUNT(*) FILTER (WHERE "createdAt" >= ${cutoff90})::bigint     AS count90
+      FROM "Wishlist"
+      WHERE shop = ${shop}
+    `,
   ]);
+
+  if (!installation) return null;
+
+  const cs = rawConvStats[0];
+  const wc = rawWishlistCounts[0];
 
   return {
     installation: {
@@ -82,10 +141,6 @@ async function getShopData(shop: string) {
       createdAt: installation.createdAt.toISOString(),
       shopifyPlus: installation.shopifyPlus,
     },
-    allConversions: allConversions.map((c) => ({
-      amount: Number(c.amount),
-      createdAt: c.createdAt.toISOString(),
-    })),
     allAnalytics: rawAnalytics.map((a) => ({
       date: a.date.toISOString(),
       totalWishlists: a.totalWishlists,
@@ -108,7 +163,19 @@ async function getShopData(shop: string) {
       item_count: Number(c.item_count),
       last_active: c.last_active ? c.last_active.toISOString() : null,
     })),
-    allWishlists: actualWishlistCount.map((w) => ({ createdAt: w.createdAt.toISOString() })),
+    periodStats: {
+      all:    { totalConversions: Number(cs.conv_all), totalRevenue: cs.rev_all },
+      days90: { totalConversions: Number(cs.conv90),   totalRevenue: cs.rev90  },
+      days30: { totalConversions: Number(cs.conv30),   totalRevenue: cs.rev30  },
+      days7:  { totalConversions: Number(cs.conv7),    totalRevenue: cs.rev7   },
+    },
+    allRevenueByDate: rawRevenueByDate,
+    wishlistCounts: {
+      all:    Number(wc.count_all),
+      days90: Number(wc.count90),
+      days30: Number(wc.count30),
+      days7:  Number(wc.count7),
+    },
   };
 }
 
@@ -120,11 +187,12 @@ export default async function ShopDetailPage({ params }: { params: { shop: strin
   return (
     <ShopAnalytics
       installation={data.installation}
-      allConversions={data.allConversions}
       allAnalytics={data.allAnalytics}
       topProducts={data.topProducts}
       topCustomers={data.topCustomers}
-      allWishlists={data.allWishlists}
+      periodStats={data.periodStats}
+      allRevenueByDate={data.allRevenueByDate}
+      wishlistCounts={data.wishlistCounts}
     />
   );
 }
