@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { formatNumber } from "@/lib/format";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type ShopConvRow = {
   shop: string;

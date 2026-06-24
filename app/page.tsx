@@ -3,7 +3,7 @@ import Link from "next/link";
 import StoresTable, { type Shop } from "@/components/StoresTable";
 import LogoutButton from "@/components/LogoutButton";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type RawShopRow = {
   shop: string;
@@ -28,39 +28,31 @@ async function getData() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [rawShops, totalShops, plusStores, recentInstalls] = await Promise.all([
-    prisma.$queryRaw<RawShopRow[]>`
-      SELECT
-        si.shop,
-        si.name,
-        si."myshopifyDomain",
-        si.url,
-        si."planDisplayName",
-        si."shopifyPlus",
-        si.country,
-        si."currencyCode",
-        si.email,
-        si."contactEmail",
-        si."createdAt",
-        COUNT(DISTINCT w.id)             AS wishlist_count,
-        COUNT(DISTINCT w."customerId")   AS customer_count,
-        COUNT(DISTINCT wi.id)            AS item_count,
-        COALESCE(SUM(wc.amount), 0)::float AS revenue,
-        COUNT(DISTINCT wc.id)            AS conversion_count
-      FROM "ShopInstallation" si
-      LEFT JOIN "Wishlist"           w  ON w.shop         = si.shop
-      LEFT JOIN "WishlistItem"       wi ON wi."wishlistId" = w.id
-      LEFT JOIN "WishlistConversion" wc ON wc.shop        = si.shop
-      GROUP BY si.shop, si.name, si."myshopifyDomain", si.url, si."planDisplayName",
-               si."shopifyPlus", si.country, si."currencyCode", si.email,
-               si."contactEmail", si."createdAt"
-      ORDER BY revenue DESC
-    `,
-    prisma.shopInstallation.count(),
-    prisma.shopInstallation.count({ where: { shopifyPlus: true } }),
-    prisma.shopInstallation.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
-  ]);
+  const rawShops = await prisma.$queryRaw<RawShopRow[]>`
+    SELECT
+      si.shop,
+      si.name,
+      si."myshopifyDomain",
+      si.url,
+      si."planDisplayName",
+      si."shopifyPlus",
+      si.country,
+      si."currencyCode",
+      si.email,
+      si."contactEmail",
+      si."createdAt",
+      (SELECT COUNT(*) FROM "Wishlist" w WHERE w.shop = si.shop)::bigint AS wishlist_count,
+      (SELECT COUNT(DISTINCT "customerId") FROM "Wishlist" w WHERE w.shop = si.shop)::bigint AS customer_count,
+      (SELECT COUNT(*) FROM "WishlistItem" wi JOIN "Wishlist" w ON wi."wishlistId" = w.id WHERE w.shop = si.shop)::bigint AS item_count,
+      (SELECT COALESCE(SUM(amount), 0) FROM "WishlistConversion" wc WHERE wc.shop = si.shop)::float AS revenue,
+      (SELECT COUNT(*) FROM "WishlistConversion" wc WHERE wc.shop = si.shop)::bigint AS conversion_count
+    FROM "ShopInstallation" si
+    ORDER BY revenue DESC
+  `;
 
+  const totalShops = rawShops.length;
+  const plusStores = rawShops.filter((s) => s.shopifyPlus).length;
+  const recentInstalls = rawShops.filter((s) => new Date(s.createdAt) >= thirtyDaysAgo).length;
   const uniqueCountries = new Set(rawShops.map((s) => s.country).filter(Boolean)).size;
 
   const shops: Shop[] = rawShops.map((s) => ({

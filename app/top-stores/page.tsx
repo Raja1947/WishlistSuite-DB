@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import TopStoresView from "@/components/TopStoresView";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type RawRow = {
   shop: string;

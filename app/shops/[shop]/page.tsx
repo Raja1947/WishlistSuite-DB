@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import ShopAnalytics from "@/components/ShopAnalytics";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type RawTopProduct = {
   productId: string;
