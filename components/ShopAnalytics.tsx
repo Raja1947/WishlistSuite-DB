@@ -199,7 +199,7 @@ export default function ShopAnalytics({
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(d: string) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                  tickFormatter={(d: any) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                   interval="preserveStartEnd"
                 />
                 <YAxis
@@ -207,14 +207,15 @@ export default function ShopAnalytics({
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
+                  tickFormatter={(v: any) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
                   width={55}
                 />
                 <Tooltip
                   contentStyle={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: "#a1a1aa", marginBottom: 4 }}
                   itemStyle={{ color: "#818cf8" }}
-                  labelFormatter={(d: string) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  labelFormatter={(d: any) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(v: any) => [formatCurrency(Number(v ?? 0), installation.currencyCode), "Revenue"]}
                 />
