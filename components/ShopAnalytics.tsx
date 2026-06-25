@@ -215,7 +215,8 @@ export default function ShopAnalytics({
                   labelStyle={{ color: "#a1a1aa", marginBottom: 4 }}
                   itemStyle={{ color: "#818cf8" }}
                   labelFormatter={(d: string) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                  formatter={(v: number | undefined) => [formatCurrency(v ?? 0, installation.currencyCode), "Revenue"]}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(v: any) => [formatCurrency(Number(v ?? 0), installation.currencyCode), "Revenue"]}
                 />
                 <Line
                   type="monotone"
