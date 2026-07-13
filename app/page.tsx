@@ -103,6 +103,9 @@ export default async function HomePage() {
             <Link href="/orders" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-all bg-[#1a1a1a] border border-[#3a3a3a] hover:bg-[#252525] hover:border-zinc-500">
               View orders data
             </Link>
+            <Link href="/top-emails" className="px-4 py-2 rounded-lg text-sm text-white font-medium transition-all bg-[#1a1a1a] border border-[#3a3a3a] hover:bg-[#252525] hover:border-zinc-500">
+              View email data
+            </Link>
             <LogoutButton />
           </div>
         </div>

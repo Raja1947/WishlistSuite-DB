@@ -12,6 +12,13 @@ type WishlistDetail = { id: string; name: string; isDefault: boolean; createdAt:
 type PeriodStat = { totalConversions: number; totalRevenue: number };
 type PeriodStats = { all: PeriodStat; days90: PeriodStat; days30: PeriodStat; days7: PeriodStat };
 type WishlistCounts = { all: number; days90: number; days30: number; days7: number };
+type ReminderCounts = { all: number; days90: number; days30: number; days7: number };
+type ReminderEmails = {
+  priceDrop: ReminderCounts;
+  backInStock: ReminderCounts;
+  lowInventory: ReminderCounts;
+  keptTooLong: ReminderCounts;
+};
 
 type Installation = {
   name: string;
@@ -41,6 +48,7 @@ export default function ShopAnalytics({
   periodStats,
   allRevenueByDate,
   wishlistCounts,
+  reminderEmails,
 }: {
   installation: Installation;
   allAnalytics: AnalyticsRow[];
@@ -49,6 +57,7 @@ export default function ShopAnalytics({
   periodStats: PeriodStats;
   allRevenueByDate: { date: string; revenue: number }[];
   wishlistCounts: WishlistCounts;
+  reminderEmails: ReminderEmails;
 }) {
   const [period, setPeriod] = useState<Period>("30");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
@@ -93,6 +102,14 @@ export default function ShopAnalytics({
   const totalRevenue = periodStats[periodKey].totalRevenue;
   const totalConversions = periodStats[periodKey].totalConversions;
   const totalWishlists = wishlistCounts[periodKey];
+
+  const reminderRows = [
+    { key: "priceDrop",   label: "Price Drop",    hint: "Price fell on a wishlisted item",     count: reminderEmails.priceDrop[periodKey] },
+    { key: "backInStock", label: "Back in Stock", hint: "Wishlisted item restocked",           count: reminderEmails.backInStock[periodKey] },
+    { key: "lowInventory", label: "Low Inventory", hint: "Wishlisted item almost sold out",     count: reminderEmails.lowInventory[periodKey] },
+    { key: "keptTooLong", label: "Kept Too Long", hint: "Reminder nudge for old wishlist items", count: reminderEmails.keptTooLong[periodKey] },
+  ];
+  const totalReminderEmails = reminderRows.reduce((sum, r) => sum + r.count, 0);
 
   const revenueByDate = useMemo(() => {
     if (!cutoff) return allRevenueByDate;
@@ -230,6 +247,35 @@ export default function ShopAnalytics({
               </LineChart>
             </ResponsiveContainer>
           )}
+        </div>
+
+        {/* Reminder Emails Sent */}
+        <div className="rounded-xl p-5 mb-6" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Reminder Emails Sent</h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Built-in reminder emails sent {period === "all" ? "all time" : `in the last ${period} days`}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-white">{formatNumber(totalReminderEmails)}</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Total emails</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {reminderRows.map((r) => (
+              <div key={r.key} className="rounded-lg p-4" style={{ background: "#141414", border: "1px solid #242424" }}>
+                <p className="text-sm text-zinc-400">{r.label}</p>
+                <p className="text-2xl font-bold text-white mt-1">{formatNumber(r.count)}</p>
+                <p className="text-[11px] text-zinc-600 mt-1 leading-tight">{r.hint}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-zinc-600 mt-4 leading-relaxed">
+            Counts built-in emails actually sent via WishlistSuite (Brevo). Klaviyo/Omnisend-only sends aren&apos;t logged and aren&apos;t counted here.
+            Kept Too Long is de-duplicated to one digest email per customer per day.
+          </p>
         </div>
 
         {/* Top Products */}

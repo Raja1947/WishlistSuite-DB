@@ -39,6 +39,13 @@ type RawWishlistCounts = {
   count90: bigint;
 };
 
+type RawReminderCounts = {
+  all_: bigint;
+  d7: bigint;
+  d30: bigint;
+  d90: bigint;
+};
+
 type RawRevenuePoint = { date: string; revenue: number };
 
 async function getShopData(shop: string) {
@@ -55,6 +62,10 @@ async function getShopData(shop: string) {
     rawConvStats,
     rawRevenueByDate,
     rawWishlistCounts,
+    rawPriceDrop,
+    rawBackInStock,
+    rawLowInventory,
+    rawKeptTooLong,
   ] = await Promise.all([
     prisma.shopInstallation.findUnique({ where: { shop } }),
     prisma.wishlistAnalytics.findMany({
@@ -123,12 +134,58 @@ async function getShopData(shop: string) {
       FROM "Wishlist"
       WHERE shop = ${shop}
     `,
+    // Reminder emails actually sent (emailSent = true). Price drop uses notifiedAt; others use sentAt.
+    prisma.$queryRaw<RawReminderCounts[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "emailSent" = true)::bigint                                    AS all_,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "notifiedAt" >= ${cutoff7})::bigint     AS d7,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "notifiedAt" >= ${cutoff30})::bigint    AS d30,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "notifiedAt" >= ${cutoff90})::bigint    AS d90
+      FROM "PriceDropNotification"
+      WHERE shop = ${shop}
+    `,
+    prisma.$queryRaw<RawReminderCounts[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "emailSent" = true)::bigint                                AS all_,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff7})::bigint     AS d7,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff30})::bigint    AS d30,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff90})::bigint    AS d90
+      FROM "BackInStockNotification"
+      WHERE shop = ${shop}
+    `,
+    prisma.$queryRaw<RawReminderCounts[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "emailSent" = true)::bigint                                AS all_,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff7})::bigint     AS d7,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff30})::bigint    AS d30,
+        COUNT(*) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff90})::bigint    AS d90
+      FROM "LowInventoryNotification"
+      WHERE shop = ${shop}
+    `,
+    // Kept-too-long writes one row per product but sends one digest email per customer per run,
+    // so count distinct (customer, day) to approximate actual emails sent.
+    prisma.$queryRaw<RawReminderCounts[]>`
+      SELECT
+        COUNT(DISTINCT ("customerId" || '|' || "sentAt"::date::text)) FILTER (WHERE "emailSent" = true)::bigint                                AS all_,
+        COUNT(DISTINCT ("customerId" || '|' || "sentAt"::date::text)) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff7})::bigint     AS d7,
+        COUNT(DISTINCT ("customerId" || '|' || "sentAt"::date::text)) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff30})::bigint    AS d30,
+        COUNT(DISTINCT ("customerId" || '|' || "sentAt"::date::text)) FILTER (WHERE "emailSent" = true AND "sentAt" >= ${cutoff90})::bigint    AS d90
+      FROM "KeptTooLongNotification"
+      WHERE shop = ${shop}
+    `,
   ]);
 
   if (!installation) return null;
 
   const cs = rawConvStats[0];
   const wc = rawWishlistCounts[0];
+
+  const mapReminder = (r: RawReminderCounts) => ({
+    all: Number(r.all_),
+    days90: Number(r.d90),
+    days30: Number(r.d30),
+    days7: Number(r.d7),
+  });
 
   return {
     installation: {
@@ -176,6 +233,12 @@ async function getShopData(shop: string) {
       days30: Number(wc.count30),
       days7:  Number(wc.count7),
     },
+    reminderEmails: {
+      priceDrop:   mapReminder(rawPriceDrop[0]),
+      backInStock: mapReminder(rawBackInStock[0]),
+      lowInventory: mapReminder(rawLowInventory[0]),
+      keptTooLong: mapReminder(rawKeptTooLong[0]),
+    },
   };
 }
 
@@ -193,6 +256,7 @@ export default async function ShopDetailPage({ params }: { params: { shop: strin
       periodStats={data.periodStats}
       allRevenueByDate={data.allRevenueByDate}
       wishlistCounts={data.wishlistCounts}
+      reminderEmails={data.reminderEmails}
     />
   );
 }
