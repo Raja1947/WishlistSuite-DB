@@ -221,8 +221,10 @@ export default function StoreEmailRecipients({
                   >
                     <td className="px-4 py-3 text-zinc-500 text-xs">{i + 1}</td>
                     <td className="px-4 py-3">
-                      <div className="text-zinc-200 font-medium">{r.email ?? "Unknown"}</div>
-                      <div className="text-zinc-500 text-xs font-mono truncate max-w-[220px]">{r.customerId}</div>
+                      <Link href={`/top-emails/${encodeURIComponent(shop)}/${encodeURIComponent(r.customerId)}`} className="group">
+                        <div className="text-blue-400 group-hover:underline font-medium">{r.email ?? "Unknown"}</div>
+                        <div className="text-zinc-500 text-xs font-mono truncate max-w-[220px]">{r.customerId}</div>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-white font-semibold">{formatNumber(r.total)}</td>
                     <td className="px-4 py-3 text-zinc-300">{formatNumber(r.priceDrop)}</td>
