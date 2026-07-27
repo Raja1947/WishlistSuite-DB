@@ -387,7 +387,7 @@ export default function StoresTable({ shops }: { shops: Shop[] }) {
                       {col.key === "wishlist_count" && <span>{formatNumber(shop.wishlist_count)}</span>}
                       {col.key === "customer_count" && <span>{formatNumber(shop.customer_count)}</span>}
                       {col.key === "item_count" && <span>{formatNumber(shop.item_count)}</span>}
-                      {col.key === "revenue" && <span>{formatCurrency(shop.revenue, shop.currencyCode)}</span>}
+                      {col.key === "revenue" && <span>{formatCurrency(shop.revenue)}</span>}
                       {col.key === "conversion_count" && <span>{formatNumber(shop.conversion_count)}</span>}
                       {col.key === "analytics" && (
                         <Link href={`/shops/${encodeURIComponent(shop.shop)}`} className="text-blue-400 hover:underline">

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import LiveVsDevView from "@/components/LiveVsDevView";
+import { getUsdRates, toUsd } from "@/lib/currency";
 
 export const revalidate = 300;
 
@@ -57,6 +58,7 @@ export default async function LiveVsDevPage() {
   ]);
 
   const statsByShop = new Map(rawConvStats.map((s) => [s.shop, s]));
+  const rates = await getUsdRates();
 
   const stores = rawStores.map((s) => {
     const c = statsByShop.get(s.shop);
@@ -71,10 +73,10 @@ export default async function LiveVsDevPage() {
       partnerDevelopment: s.partnerDevelopment,
       wishlist_count: Number(s.wishlist_count),
       stats: {
-        days7:  { revenue: c?.rev7   ?? 0, orders: Number(c?.orders7   ?? 0) },
-        days30: { revenue: c?.rev30  ?? 0, orders: Number(c?.orders30  ?? 0) },
-        days90: { revenue: c?.rev90  ?? 0, orders: Number(c?.orders90  ?? 0) },
-        all:    { revenue: c?.rev_all ?? 0, orders: Number(c?.orders_all ?? 0) },
+        days7:  { revenue: toUsd(c?.rev7   ?? 0, s.currencyCode, rates), orders: Number(c?.orders7   ?? 0) },
+        days30: { revenue: toUsd(c?.rev30  ?? 0, s.currencyCode, rates), orders: Number(c?.orders30  ?? 0) },
+        days90: { revenue: toUsd(c?.rev90  ?? 0, s.currencyCode, rates), orders: Number(c?.orders90  ?? 0) },
+        all:    { revenue: toUsd(c?.rev_all ?? 0, s.currencyCode, rates), orders: Number(c?.orders_all ?? 0) },
       },
     };
   });

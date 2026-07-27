@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import ShopAnalytics from "@/components/ShopAnalytics";
+import { getUsdRates, toUsd } from "@/lib/currency";
 
 export const revalidate = 300;
 
@@ -179,6 +180,8 @@ async function getShopData(shop: string) {
 
   const cs = rawConvStats[0];
   const wc = rawWishlistCounts[0];
+  const rates = await getUsdRates();
+  const shopCurrency = installation.currencyCode;
 
   const mapReminder = (r: RawReminderCounts) => ({
     all: Number(r.all_),
@@ -221,12 +224,12 @@ async function getShopData(shop: string) {
       last_active: c.last_active ? c.last_active.toISOString() : null,
     })),
     periodStats: {
-      all:    { totalConversions: Number(cs.conv_all), totalRevenue: cs.rev_all },
-      days90: { totalConversions: Number(cs.conv90),   totalRevenue: cs.rev90  },
-      days30: { totalConversions: Number(cs.conv30),   totalRevenue: cs.rev30  },
-      days7:  { totalConversions: Number(cs.conv7),    totalRevenue: cs.rev7   },
+      all:    { totalConversions: Number(cs.conv_all), totalRevenue: toUsd(cs.rev_all, shopCurrency, rates) },
+      days90: { totalConversions: Number(cs.conv90),   totalRevenue: toUsd(cs.rev90,   shopCurrency, rates) },
+      days30: { totalConversions: Number(cs.conv30),   totalRevenue: toUsd(cs.rev30,   shopCurrency, rates) },
+      days7:  { totalConversions: Number(cs.conv7),    totalRevenue: toUsd(cs.rev7,    shopCurrency, rates) },
     },
-    allRevenueByDate: rawRevenueByDate,
+    allRevenueByDate: rawRevenueByDate.map((r) => ({ ...r, revenue: toUsd(r.revenue, shopCurrency, rates) })),
     wishlistCounts: {
       all:    Number(wc.count_all),
       days90: Number(wc.count90),

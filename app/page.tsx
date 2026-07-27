@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import StoresTable, { type Shop } from "@/components/StoresTable";
 import LogoutButton from "@/components/LogoutButton";
+import { getUsdRates, toUsd } from "@/lib/currency";
 
 export const revalidate = 300;
 
@@ -55,16 +56,20 @@ async function getData() {
   const recentInstalls = rawShops.filter((s) => new Date(s.createdAt) >= thirtyDaysAgo).length;
   const uniqueCountries = new Set(rawShops.map((s) => s.country).filter(Boolean)).size;
 
-  const shops: Shop[] = rawShops.map((s) => ({
-    ...s,
-    wishlist_count: Number(s.wishlist_count),
-    customer_count: Number(s.customer_count),
-    item_count: Number(s.item_count),
-    revenue: Number(s.revenue),
-    conversion_count: Number(s.conversion_count),
-    createdAt: s.createdAt.toISOString(),
-    url: s.url || `https://${s.myshopifyDomain}`,
-  }));
+  const rates = await getUsdRates();
+
+  const shops: Shop[] = rawShops
+    .map((s) => ({
+      ...s,
+      wishlist_count: Number(s.wishlist_count),
+      customer_count: Number(s.customer_count),
+      item_count: Number(s.item_count),
+      revenue: toUsd(Number(s.revenue), s.currencyCode, rates),
+      conversion_count: Number(s.conversion_count),
+      createdAt: s.createdAt.toISOString(),
+      url: s.url || `https://${s.myshopifyDomain}`,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
 
   return { shops, totalShops, uniqueCountries, plusStores, recentInstalls };
 }

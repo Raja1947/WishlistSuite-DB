@@ -181,7 +181,7 @@ export default function ShopAnalytics({
               <span className="text-sm text-zinc-400">Total Revenue</span>
               <svg className="w-5 h-5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
             </div>
-            <p className="text-2xl font-bold text-white">{formatCurrency(totalRevenue, installation.currencyCode)}</p>
+            <p className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</p>
             <p className="text-xs text-zinc-500 mt-1">{period === "all" ? "All time total" : `${period} day total`}</p>
           </div>
           <div className="rounded-xl p-5" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
@@ -234,7 +234,7 @@ export default function ShopAnalytics({
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   labelFormatter={(d: any) => new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(v: any) => [formatCurrency(Number(v ?? 0), installation.currencyCode), "Revenue"]}
+                  formatter={(v: any) => [formatCurrency(Number(v ?? 0)), "Revenue"]}
                 />
                 <Line
                   type="monotone"
